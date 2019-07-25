@@ -1,2 +1,5 @@
-# steelhead_IPM
-This repo contains the code and data necessary to reproduce the analyses described in Scheuerell et al.
+# Integrated population model (IPM) for Skagit River steelhead
+
+The code and data provided here will allow anyone to reproduce the analyses and results described in
+
+> Scheuerell MD, Ruff CP, Anderson JH, Beamer EM (In review) An integrated population model for estimating the relative effects of natural and anthropogenic factors on a threatened population of Pacific salmon
