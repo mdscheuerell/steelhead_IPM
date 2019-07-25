@@ -1,0 +1,230 @@
+---
+title: Appendix S1. Instructions for retrieving and archiving the environmental covariates.
+subtitle: Supporting information for Scheuerell et al.
+output:
+  pdf_document:
+    highlight: haddock
+    toc: yes
+    number_sections: true
+    toc_depth: '3'
+fontsize: 11pt
+geometry: margin=1in
+---
+
+```{r set_options, echo = FALSE, message = FALSE}
+options(width = 100)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+\vspace{0.2in}
+
+This is version `r paste0('0.',format(Sys.time(), '%y.%m.%d'))`.
+
+# Background
+
+This appendix describes how to retrieve the environmental covariates used in our analyses. After reading in the raw data, summarizing them (if necessary), and trimming them to the appropriate time frame, they table of covariates is written to a `.csv` file.
+
+All of the analyses require the [R software](https://cran.r-project.org/) (v3.4.3 or later) for data retrieval and processing. We also need the __readr__ and __here__ packages, which are not included with the base installation of __R__.
+
+```{r load_pkgs, message = FALSE, warning = FALSE}
+if(!require("readr")) {
+  install.packages("readr")
+  library("readr")
+}
+if(!require("here")) {
+  install.packages("here")
+  library("here")
+}
+## set data dir
+datadir <- here("data")
+```
+
+# User inputs
+
+We begin by supplying values for the following parameters, which we use for trimming and lagging the covariates to the appropriate years.
+
+```{r get_user_inputs}
+## first & last years of fish data
+yr_frst <- 1978
+yr_last <- 2018
+
+## min & max adult ages (years)
+age_min <- 3
+age_max <- 8
+
+## time lags (years) for covariates
+flow_lag <- 1
+marine_lag <- 2
+hrel_lag <- 2
+
+## number of years for run forecasts
+n_fore <- 0
+```
+
+# Retrieve covariates
+
+Our analysis investigates 4 covariates as possible drivers of the population's instrinic growth rate:
+
+1. Maximum river discharge in winter;
+2. Minimum river discharge in summer;
+3. North Pacific Gyre Oscillation;
+4. Releases of hatchery-born juveniles.
+
+## River discharge
+
+We begin by getting the daily flow data from the US Geological Service [National Water Information System](http://waterdata.usgs.gov/nwis). We will use the direct link to the gage data from the Skagit River near Mount Vernon, WA (#12178100), beginning with the first year of fish data.
+
+```{r get_flow_url}
+## flow gage ID
+flow_site <- 12178100
+## get URL for flow data from USGS
+flow_url <- paste0("https://waterdata.usgs.gov/nwis/dv",
+                   "?cb_00060=on",
+                   "&format=rdb",
+                   "&site_no=",flow_site,
+                   "&begin_date=",yr_frst,"-01-01",
+                   "&end_date=",yr_last,"-12-31")
+```
+
+Next we retrieve the raw data file and print its metadata.
+
+```{r get_flow_metadata, cache=TRUE}
+## raw flow data from USGS
+flow_raw <- read_lines(flow_url)
+## lines with metadata
+hdr_flow <- which(lapply(flow_raw, grep, pattern = "\\#")==1, arr.ind = TRUE)
+## print flow metadata
+print(flow_raw[hdr_flow], quote = FALSE)
+```
+
+Lastly, we extract the actual flow data for the years of interest and inspect the file contents.
+
+```{r get_flows, cache=TRUE}
+## flow data for years of interest
+dat_flow <-  read_tsv(flow_url,
+                      col_names = FALSE,
+                      col_types = "ciDdc",
+                      skip = max(hdr_flow)+2)
+colnames(dat_flow) <- unlist(strsplit(tolower(flow_raw[max(hdr_flow)+1]),
+                                      split = "\\s+"))
+head(dat_flow)
+```
+
+We only need the 3rd and 4th columns, which contain the date (`datetime`) and daily flow measurements (``r grep("[0-9]$",colnames(dat_flow), value=TRUE)``). We will rename them to `date` and `flow`, respectively, and convert the flow units from "cubic feet per second" to "cubic meters per second".
+
+```{r trim_dat_flow, cache=TRUE}
+## keep only relevant columns
+dat_flow <- dat_flow[c("datetime", grep("[0-9]$", colnames(dat_flow), value = TRUE))]
+## nicer column names
+colnames(dat_flow) <- c("date","flow")
+## convert cubic feet to cubic meters
+dat_flow$flow <- dat_flow$flow / 35.3147
+## flow by year & month
+dat_flow$year <- as.integer(format(dat_flow$date,"%Y"))
+dat_flow$month <- as.integer(format(dat_flow$date,"%m"))
+dat_flow <- dat_flow[,c("year","month","flow")]
+```
+
+### Winter maximum
+
+We are interested in the maximum of the daily peak flows from October through March during the first year that juveniles are rearing in streams. This means we need to combine flow values from the fall of year $t$ with those in the winter and spring of year $t+1$. We also need to shift the flow data forward by `r flow_lag` year so they align with the juvenile life stage. Therefore, the flow time series will begin in `r yr_frst` and end in `r yr_last - age_min + n_fore + flow_lag`.
+
+```{r wtr_flow, cache=TRUE}
+## autumn flows in year t
+flow_aut <- subset(dat_flow, (month>=10 & month<=12)
+                   & year >= yr_frst & year <= yr_last-age_min+n_fore)
+## spring flows in year t+1
+flow_spr <- subset(dat_flow,
+                   (month>=1 & month<=3)
+                   & year >= yr_frst+flow_lag
+                   & year <= yr_last-age_min+n_fore+flow_lag)
+## change spr year index to match aut
+flow_spr[,"year"] <- flow_spr[,"year"] - flow_lag
+## combined flows indexed to brood year & calculate max flow
+dat_flow_wtr <- aggregate(flow ~ year, data = rbind(flow_aut,flow_spr), max)
+dat_flow_wtr[,"flow"] <- round(dat_flow_wtr[,"flow"], 1) 
+## change year index to brood year
+dat_flow_wtr[,"year"] <- dat_flow_wtr[,"year"] 
+## for plotting purpose later
+colnames(dat_flow_wtr)[2] <- "flow_wtr"
+```
+
+### Summer minimum
+
+Retrieving the minimum flow juveniles would experience during their first summer (June through September) is straightforward.
+
+```{r sum_flow, cache=TRUE}
+## summer flows in year t
+flow_sum <- subset(dat_flow, (month>=6 & month<=9)
+                   & year >= yr_frst+flow_lag
+                   & year <= yr_last-age_min+n_fore+flow_lag)
+## change year index to brood year
+flow_sum[,"year"] <- flow_sum[,"year"] - flow_lag
+## combined flows indexed to brood year & calculate min flow
+dat_flow_sum <- aggregate(flow ~ year, data = flow_sum, min)
+dat_flow_sum <- round(dat_flow_sum, 2)
+## for plotting purpose later
+colnames(dat_flow_sum)[2] <- "flow_sum"
+```
+
+## North Pacific Gyre Oscillation
+
+We used the monthly NPGO data provided by Emanuele Di Lorenzo of the Georgia Institute of Technology, which are available [here](http://www.o3d.org/npgo/npgo.php). We begin by downloading the raw NPGO data and viewing the metadata.
+
+```{r get_NPGO_metadata, cache=TRUE}
+## URL for NPGO data
+url_NPGO <- "http://www.o3d.org/npgo/npgo.php"
+## raw NPGO data 
+NPGO_raw <- read_lines(url_NPGO)
+## line with data headers
+hdr_NPGO <- which(lapply(NPGO_raw,grep,pattern="YEAR")==1, arr.ind = TRUE)
+## print PDO metadata
+print(NPGO_raw[seq(hdr_NPGO)],quote = FALSE)
+```
+
+Next, we extract the actual NPGO indices for the years of interest and inspect the file contents. We also want the average NPGO annual index from January 1 through December 31 during the first year that the juvenile steelhead are in the ocean (i.e., during their second year of life). Therefore, we need NPGO values from `yr_frst + marine_lag == `r yr_frst+marine_lag`` through `yr_last - age_min + n_fore + marine_lag == `r yr_last - age_min + n_fore + marine_lag``.
+
+```{r get_NPGO, cache=TRUE}
+## number of years of data
+n_yrs <- yr_last - yr_frst + 1
+## NPGO data for years of interest
+dat_NPGO <- read_table(url_NPGO, col_names = FALSE,
+                       skip = hdr_NPGO + (yr_frst-1950)*12,
+                       n_max = (n_yrs-1)*12)
+colnames(dat_NPGO) <- c("year","month","NPGO")
+## select only years of interest indexed by brood year 
+dat_NPGO <- dat_NPGO[dat_NPGO$year >= yr_frst+marine_lag &
+                     dat_NPGO$year <= yr_last-age_min+n_fore+marine_lag,]
+dat_NPGO <- aggregate(dat_NPGO$NPGO, by = list(year = dat_NPGO$year), mean)
+dat_NPGO <- data.frame(year = seq(yr_frst,yr_last-age_min+n_fore),
+                       NPGO = dat_NPGO[,2])
+dat_NPGO[,"NPGO"] <- round(dat_NPGO[,"NPGO"], 2)
+```
+
+## Hatchery releases
+
+The numbers of hatchery fish released each year are provided in `/data/skagit_sthd_hrel.csv`. They have already been lagged 2 years (i.e., brood year + 2) to account for the potential competitive interactions during their juvenile life stage.
+
+```{r get_hatchery_releases}
+## get releases
+dat_hrel <- read_csv(file.path(datadir, "skagit_sthd_hrel.csv"))
+dat_hrel <- subset(dat_hrel, dat_hrel$year <= max(dat_NPGO$year))
+```
+
+# Archive covariates
+
+The last thing we will do is combine the covariates into one data frame and write them to a file for use in the analysis.
+
+```{r combine_covars, cache=TRUE}
+## combine covariates
+dat_cvrs <- Reduce(function(...) merge(..., all = TRUE),
+                   list(dat_flow_wtr,
+                        dat_flow_sum,
+                        dat_NPGO,
+                        dat_hrel))
+## check table of covariates
+head(dat_cvrs)
+## write covariates to a file
+write_csv(dat_cvrs, file.path(datadir, "skagit_sthd_covars.csv"))
+```
+
