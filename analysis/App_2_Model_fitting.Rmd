@@ -18,8 +18,8 @@ set.seed(123)
 if(file.exists("cnt_time.txt")) {
   file.remove("cnt_time.txt")
 }
-mod_names <- data.frame(mod = rep(c("Ricker", "Beverton-Holt"), 2),
-                        cov = rep(c("without", "with"), 2))
+mod_names <- data.frame(mod = rep(c("D-I", "Ricker", "Beverton-Holt"), 2),
+                        cov = rep(c("without", "with"), 3))
 ```
 
 \vspace{0.2in}
@@ -702,8 +702,8 @@ model {
   for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
 
   ## AR(1) coef for proc errors
-  # phi ~ dunif(-0.999,0.999);
-  phi <- 0;
+  phi ~ dunif(-0.99,0.99);
+  # phi <- 0;
   
   ## process variance for recruits model
   sigma_r ~ dnorm(0, 2e-2) T(0,);
@@ -867,8 +867,8 @@ model {
   for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
 
   ## AR(1) coef for proc errors
-  # phi ~ dunif(-0.999,0.999);
-  phi <- 0;
+  phi ~ dunif(-0.99,0.99);
+  # phi <- 0;
   
   ## process variance for recruits model
   sigma_r ~ dnorm(0, 2e-2) T(0,);
@@ -1032,8 +1032,8 @@ model {
   for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
 
   ## AR(1) coef for proc errors
-  # phi ~ dunif(-0.999,0.999);
-  phi <- 0;
+  phi ~ dunif(-0.99,0.99);
+  # phi <- 0;
   
   ## innovation in first year
   innov_1 ~ dnorm(0,tau_r*(1-phi*phi));
@@ -1394,7 +1394,8 @@ Now we fit the models that include covariates. Here is the `inits` function for 
 ## function for inits
 init_vals_cov <- function(dd = TRUE) {
   x <- list(alpha = 5,
-            gamma = rep(0, n_mods),
+            gamma = rep(0, n_cov),
+            phi = 0.5,
             pi_tau = 10,
             pi_eta = rep(1,A),
             pi_vec = matrix(c(0.01,0.35,0.47,0.15,0.01,0.01),
@@ -1403,8 +1404,7 @@ init_vals_cov <- function(dd = TRUE) {
             Rec_mu = log(1000),
             Rec_sig = 0.1,
             tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
-            innov_1 = 0,
-            phi = 0.5)
+            innov_1 = 0)
   if(dd) {
     x$beta_inv <- exp(mean(ln_dat_esc, na.rm = TRUE)) 
   }
@@ -1558,8 +1558,8 @@ for(i in 1:n_mods) {
 tbl_LOOIC <- round(compare(x = LOOIC), 2)
 rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
 tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
-tbl_LOOIC <- cbind(model = rep(c("Ricker","B-H"),2),
-                   covar = rep(c("No","Yes"),ea=2),
+tbl_LOOIC <- cbind(model = rep(c("D-I","Ricker","B-H"), 2),
+                   covar = rep(c("No","Yes"), each = 3),
                    as.data.frame(tbl_LOOIC))
 tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
 

@@ -10,16 +10,8 @@ model {
   mu_Rkr_a <- log(alpha);
   E_Rkr_a <- mu_Rkr_a + sigma_r/(2 - 2*phi^2);
   
-  ## strength of dens depend
-  beta_inv ~ dnorm(0, 1e-9) T(0,);
-  beta <- 1/beta_inv;
-  
-  ## covariate effects
-  for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
-
   ## AR(1) coef for proc errors
-  phi ~ dunif(-0.99,0.99);
-  # phi <- 0;
+  phi ~ dunif(-0.999,0.999);
   
   ## process variance for recruits model
   sigma_r ~ dnorm(0, 2e-2) T(0,);
@@ -66,9 +58,8 @@ model {
   ##------------
   ## 1st brood yr requires different innovation
   ## predicted recruits in BY t
-  covar[1] <- inprod(gamma,mod_cvrs[1,]);
-  ln_Rkr_a[1] <- mu_Rkr_a + covar[1]; 
-  E_ln_Rec[1] <- ln_Rkr_a[1] + ln_Sp[1] - beta*Sp[1] + phi*innov_1;
+  ln_Rkr_a[1] <- mu_Rkr_a;
+  E_ln_Rec[1] <- ln_Rkr_a[1] + ln_Sp[1] + phi*innov_1;
   tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1],tau_r);
   res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
   ## median of total recruits
@@ -85,9 +76,8 @@ model {
   ## brood years 2:(n_yrs-age_min)
   for(t in 2:(n_yrs-age_min+n_fore)) {
     ## predicted recruits in BY t
-    covar[t] <- inprod(gamma, mod_cvrs[t,]);
-    ln_Rkr_a[t] <- mu_Rkr_a + covar[t]; 
-    E_ln_Rec[t] <- ln_Rkr_a[t] + ln_Sp[t] - beta*Sp[t] + phi*res_ln_Rec[t-1];
+    ln_Rkr_a[t] <- mu_Rkr_a; 
+    E_ln_Rec[t] <- ln_Rkr_a[t] + ln_Sp[t] + phi*res_ln_Rec[t-1];
     tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t],tau_r);
     res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
     ## median of total recruits
