@@ -72,7 +72,7 @@ Our analysis investigates 4 covariates as possible drivers of the population's i
 
 ## River discharge
 
-We begin by getting the daily flow data from the US Geological Service [National Water Information System](http://waterdata.usgs.gov/nwis). We will use the direct link to the gage data from the Skagit River near Mount Vernon, WA (#12178100), beginning with the first year of fish data.
+We begin by getting the daily flow data from the US Geological Service [National Water Information System](http://waterdata.usgs.gov/nwis). We will use the direct link to the gage data from the Skagit River near Mount Vernon, WA (#12178000), beginning with the first year of fish data.
 
 ```{r get_flow_url}
 ## flow gage ID
@@ -127,7 +127,7 @@ dat_flow <- dat_flow[,c("year","month","flow")]
 
 ### Winter maximum
 
-We are interested in the maximum of the daily peak flows from October through March during the first year that juveniles are rearing in streams. This means we need to combine flow values from the fall of year $t$ with those in the winter and spring of year $t+1$. We also need to shift the flow data forward by `r flow_lag` year so they align with the juvenile life stage. Therefore, the flow time series will begin in `r yr_frst` and end in `r yr_last - age_min + n_fore + flow_lag`.
+We are interested in the maximum of the daily peak flows from October through May during the first year that juveniles are rearing in streams. This means we need to combine flow values from the fall of year $t$ with those in the winter and spring of year $t+1$. We also need to shift the flow data forward by `r flow_lag` year so they align with the juvenile life stage. Therefore, the flow time series will begin in `r yr_frst` and end in `r yr_last - age_min + n_fore + flow_lag`.
 
 ```{r wtr_flow, cache=TRUE}
 ## autumn flows in year t
@@ -225,6 +225,6 @@ dat_cvrs <- Reduce(function(...) merge(..., all = TRUE),
 ## check table of covariates
 head(dat_cvrs)
 ## write covariates to a file
-write_csv(dat_cvrs, file.path(datadir, "skagit_sthd_covars_M.csv"))
+write_csv(dat_cvrs, file.path(datadir, "skagit_sthd_covars.csv"))
 ```
 
