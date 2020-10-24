@@ -1,11 +1,10 @@
 ---
 title: Appendix S1. Instructions for retrieving and archiving the environmental covariates.
-subtitle: Supporting information for Scheuerell et al.
 output:
   pdf_document:
     highlight: haddock
     toc: yes
-    number_sections: true
+    number_sections: false
     toc_depth: '3'
 fontsize: 11pt
 geometry: margin=1in
@@ -27,14 +26,10 @@ This appendix describes how to retrieve the environmental covariates used in our
 All of the analyses require the [R software](https://cran.r-project.org/) (v3.4.3 or later) for data retrieval and processing. We also need the __readr__ and __here__ packages, which are not included with the base installation of __R__.
 
 ```{r load_pkgs, message = FALSE, warning = FALSE}
-if(!require("readr")) {
-  install.packages("readr")
-  library("readr")
-}
-if(!require("here")) {
-  install.packages("here")
-  library("here")
-}
+## load libraries
+library("readr")
+library("here")
+
 ## set data dir
 datadir <- here("data")
 ```
@@ -72,11 +67,11 @@ Our analysis investigates 4 covariates as possible drivers of the population's i
 
 ## River discharge
 
-We begin by getting the daily flow data from the US Geological Service [National Water Information System](http://waterdata.usgs.gov/nwis). We will use the direct link to the gage data from the Skagit River near Mount Vernon, WA (#12178100), beginning with the first year of fish data.
+We begin by getting the daily flow data from the US Geological Service [National Water Information System](http://waterdata.usgs.gov/nwis). We will use the direct link to the gage data from the Skagit River near Mount Vernon, WA (#12178000), beginning with the first year of fish data.
 
 ```{r get_flow_url}
 ## flow gage ID
-flow_site <- 12178100
+flow_site <- 12178000
 ## get URL for flow data from USGS
 flow_url <- paste0("https://waterdata.usgs.gov/nwis/dv",
                    "?cb_00060=on",
@@ -127,7 +122,7 @@ dat_flow <- dat_flow[,c("year","month","flow")]
 
 ### Winter maximum
 
-We are interested in the maximum of the daily peak flows from October through March during the first year that juveniles are rearing in streams. This means we need to combine flow values from the fall of year $t$ with those in the winter and spring of year $t+1$. We also need to shift the flow data forward by `r flow_lag` year so they align with the juvenile life stage. Therefore, the flow time series will begin in `r yr_frst` and end in `r yr_last - age_min + n_fore + flow_lag`.
+We are interested in the maximum of the daily peak flows from October through May during the first year that juveniles are rearing in streams. This means we need to combine flow values from the fall of year $t$ with those in the winter and spring of year $t+1$. We also need to shift the flow data forward by `r flow_lag` year so they align with the juvenile life stage. Therefore, the flow time series will begin in `r yr_frst` and end in `r yr_last - age_min + n_fore + flow_lag`.
 
 ```{r wtr_flow, cache=TRUE}
 ## autumn flows in year t
@@ -135,7 +130,7 @@ flow_aut <- subset(dat_flow, (month>=10 & month<=12)
                    & year >= yr_frst & year <= yr_last-age_min+n_fore)
 ## spring flows in year t+1
 flow_spr <- subset(dat_flow,
-                   (month>=1 & month<=3)
+                   (month>=1 & month<=5)
                    & year >= yr_frst+flow_lag
                    & year <= yr_last-age_min+n_fore+flow_lag)
 ## change spr year index to match aut

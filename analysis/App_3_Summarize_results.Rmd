@@ -1,11 +1,10 @@
 ---
-title: Appendix S3. Steps to recreate figures from main text.
-subtitle: Supporting information for Scheuerell et al.
+title: Appendix S3. Steps to recreate the manuscript figures.
 output:
   pdf_document:
     highlight: haddock
     toc: yes
-    number_sections: true
+    number_sections: false
     toc_depth: '3'
     keep_tex: yes
 fontsize: 11pt
@@ -21,50 +20,37 @@ knitr::opts_chunk$set(message = FALSE, dev = "pdf")
 
 This is version `r paste0('0.',format(Sys.time(), '%y.%m.%d'))`.
 
-# Background
+\newpage
+
+# Setup
 
 This appendix shows how to recreate the figures in the main text based on the results from the best of the fitted models. All analyses require the [R software](https://cran.r-project.org/) (v3.5 or later), as well as a few packages that are not included with the base installation of R.
 
 ```{r load_pkgs, message = FALSE, warning = FALSE}
-if(!require("readr")) {
-  install.packages("readr")
-  library("readr")
-}
-if(!require("captioner")) {
-  devtools::install_github("adletaw/captioner")
-  library("captioner")
-}
-if(!require("coda")) {
-  install.packages("coda")
-  library("coda")
-}
-if(!require("here")) {
-  install.packages("here")
-  library("here")
-}
-if(!require("gsl")) {
-  install.packages("gsl")
-  library("gsl")
-}
+library("here")
+library("readr")
+library("captioner")
+library("coda")
+library("gsl")
 
 ## set default caption delimter
 fig_cap <- captioner(suffix = ".")
 
 ## set directory locations
 datadir <- here("data")
-analdir <- here("analysis")
 savedir <- here("analysis/cache")
 
-## better round/floor/ceiling
+## round/floor/ceiling with varying precision
 around <- function(x, func = "round", prec = 1) {
-  ## `func` can be "round", "floor", or "ceiling"
-  ## `prec` is desired precision (eg, 0.1 is to nearest tenth)
+  ## `x` must be a real number
   if(!is.double(x)) {
     stop("`x` must be a real number")
   }
+  ## `func` can be "round", "floor", or "ceiling"
   if(!(func %in% c("round", "floor", "ceiling"))) {
-    stop("`func` must be \"round\", \"floor\", or \"ceiling\"")
+    stop("`func` must be one of \"round\", \"floor\", or \"ceiling\"")
   }
+  ## `prec` is desired precision (eg, 0.1 is to nearest tenth)
   if(prec <= 0) {
     stop("`prec` cannot be less than or equal to 0")
   }
@@ -72,7 +58,9 @@ around <- function(x, func = "round", prec = 1) {
 }
 ```
 
-```{r get_user_inputs, echo=FALSE}
+# User inputs
+
+```{r get_user_inputs}
 ## first & last years of fish data
 yr_frst <- 1978
 yr_last <- 2018
@@ -86,9 +74,6 @@ age_min <- 3
 age_max <- 8
 ## num of age classes
 A <- age_max - age_min + 1
-
-## number of years for run forecasts
-n_fore <- 0
 
 ## posterior coverage interval
 CI_vec <- c(0.025,0.5,0.975)
@@ -104,32 +89,36 @@ cov_names <- c(expression(paste("Max flow (",m^3," ",s^{-1},")")),
 
 Here we load in the estimated parameters and states from the selected model, as well as the covariates and harvest data and escapement data.
 
-```{r load_mod_fits}
+```{r load_info}
+## best fitting model
 best_fit <- readRDS(file.path(savedir, "fit_bh_cov.rds"))
-```
 
-```{r load_covariates}
 ## covariate(s)
 dat_cvrs <- read_csv(file.path(datadir, "skagit_sthd_covars.csv"))
 ## total number of covariates
 n_cov <- dim(dat_cvrs)[2] - 1
-```
 
-```{r get_escapement_data}
 ## escapement
 dat_esc <- read_csv(file.path(datadir, "skagit_sthd_esc.csv"))
 ## log of escapement
-ln_dat_esc <- c(log(dat_esc$escapement), rep(NA, n_fore))
-```
+ln_dat_esc <- log(dat_esc$escapement)
 
-```{r get_harvest}
 ## harvest
 dat_harv <- read_csv(file.path(datadir, "skagit_sthd_catch.csv"))
 ## drop year col & first age_max rows
-dat_harv <- c(dat_harv$catch, rep(0, n_fore))
+dat_harv <- dat_harv$catch
 ```
 
-# Model forms
+# Main results
+
+We need to convert the `mcmc.list` output into a more user-friendly form for plotting, etc.
+
+```{r reformat_posteriors}
+## reformat model posteriors
+mod_res <- do.call("rbind", best_fit)
+```
+
+## Fig 1 - Model forms
 
 Here are the model parameters we used for the schematics of the deterministic forms for the Ricker and Beverton-Holt models.
 
@@ -162,7 +151,7 @@ rr <- ra*ss/exp(rb*ss)
 br <- ba*ss/(1 + bb*ss)
 ```
 
-Here is the code to recreate the schematics in Figure 1.
+Here is the code to recreate the model forms shown in Figure 1.
 
 ```{r fig_1_model_forms, fig.height=6.5, fig.width=3.25, fig.pos="placeHere", fig.align="center"}
 layout(matrix(c(1,0,2),3,1),
@@ -190,7 +179,8 @@ segments(0, 0, 1900, ra*1900, lty="dashed")
 text(2000, ra*2000, expression(alpha), adj=c(0.5,0.5))
 ## MSY
 segments(rsy,0,rsy,ra*rsy/exp(rb*rsy), lty="dashed")
-text(rsy, 0, expression(frac(1-italic(W)~bgroup("(",frac(italic(e),alpha),")"),beta)), adj=c(0.5,1.1), xpd=NA)
+text(rsy, 0, expression(frac(1-italic(W)~bgroup("(",frac(italic(e),alpha),")"),beta)),
+     adj=c(0.5,1.1), xpd=NA)
 segments(par()$usr[1],ra*rsy/exp(rb*rsy),rsy,ra*rsy/exp(rb*rsy), lty="dashed")
 text(0, ra*rsy/exp(rb*rsy), expression(italic(R)[MSY]), pos=2, xpd=NA)
 ## K
@@ -233,34 +223,25 @@ cnt <- 1
 
 `r fig_cap(cnt, caption = "Deterministic forms of the (a) Ricker and (b) Beverton-Holt models used in the analyses (thick lines), including equations for carrying capacity ($K$) and the number of recruits corresponding to the maximum sustained yield ($R_{\\text{MSY}}$). The parameter $\\alpha$ defines the slope at the origin, the constant $e$ is Euler’s number, and $W$ is the Lambert function (see Scheuerell 2016 for details). The gray line is where $R_t = S_t$.", display = "full")` 
 
-# Main results
-
-We need to convert the `mcmc.list` output into a more user-friendly form for plotting, etc.
-
-```{r}
-## results
-mod_res <- do.call("rbind", best_fit)
-```
-
-## Total population size
+## Fig 2 - Total population size
 
 Here is our estimate of the total run size (i.e., catch + escapement) over time. The black points are the data, the blue line is the median posterior estimate, and the shaded region is the 95% credible interval. Note that the y-axis is on a log scale.
 
-```{r fig_2_run_size, fig.width = 6, fig.height = 4.5, fig.pos = "placeHere", fig.align="center"}
+```{r fig_2_run_size, fig.width = 6, fig.height = 5, fig.pos = "placeHere", fig.align="center"}
 clr <- rgb(0, 0, 255, alpha = 50, maxColorValue = 255)
 ## estimated spawner data for plotting
 p_dat <- mod_res[,grep("Sp", colnames(mod_res))]
 p_dat <- apply(p_dat, 2, quantile, CI_vec)
-p_dat <- p_dat + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
+p_dat <- p_dat + matrix(dat_harv, length(CI_vec), n_yrs, byrow = TRUE)
 ## time seq
-t_idx_f <- seq(yr_frst, length.out = n_yrs+n_fore)
+t_idx_f <- seq(yr_frst, length.out = n_yrs)
 ## plot
 yp_min <- min(p_dat)
 yp_max <- max(p_dat)
-par(mai = c(0.8,0.8,0.1,0.1), omi = c(0.5,0.2,0.1,0.2))
+par(mai = c(0.8,0.8,0.1,0.1), omi = c(0.5,0.2,0.6,0.2))
 plot(t_idx_f, p_dat[3,], ylim = c(yp_min,yp_max), type = "n",
      log = "y", xaxt = "n", yaxt = "n", bty = "L",
-     xlab = "Year", ylab = "Run size (Catch + Escapement)", main = "", cex.lab = 1.2)
+     xlab = "Year", ylab = "Run size (catch + escapement)", main = "", cex.lab = 1.2)
 polygon(c(t_idx_f, rev(t_idx_f)), c(p_dat[3,], rev(p_dat[1,])),
         col = clr, border = NA)
 lines(t_idx_f, p_dat[2,], col = "blue3", lwd = 2)
@@ -275,7 +256,7 @@ cnt <- cnt + 1
 
 `r fig_cap(cnt, caption = "Time series of the estimated total population size (catch plus the adults that escaped to spawn). The observed data are the points; the solid line is the median estimate and the shaded region indicates the 95% credible interval.", display = "full")`
 
-## Spawner-recruit relationship
+## Fig 3 - Spawner-recruit relationship
 
 Here is the relationship between spawner and subsequent recruits (a), assuming mean values for all covariates. Gray lines show the median relationship for each of the `r n_yrs` years based on $a_t$. Note that for plotting purposes only in (b) and (c), the density in the largest bin for each parameter contains counts for all values greater or equal to that. Vertical arrows under the x-axes in (b) and (c) indicate the 2.5^th^, 50^th^, and 97.5^th^ percentiles.
 
@@ -287,13 +268,13 @@ yoffSet <- 0.03
 ## colors for plotting
 clr <- rgb(100, 0, 200,
            alpha = seq(200, 100,
-                       length.out = age_max-age_min+n_fore),
+                       length.out = age_max-age_min),
            maxColorValue = 255)
 
 ## posterior of spawners
 s_dat <- mod_res[,grep("Sp", colnames(mod_res))]
 s_dat <- apply(s_dat, 2, quantile, CI_vec)
-s_dat <- s_dat[, 1:(n_yrs-age_min+n_fore)]
+s_dat <- s_dat[, 1:(n_yrs-age_min)]
 
 ## posterior of recruits
 r_dat <- mod_res[, grep("tot_ln_Rec", colnames(mod_res))]
@@ -402,17 +383,7 @@ cnt <- cnt + 1
 
 `r fig_cap(cnt, caption = "Relationship between the number of spawning adults and their subsequent surviving offspring (recruits), assuming mean values for all covariates (a); and the estimated posterior distributions for the intrinsic productivity (b) and carrying capacity (c). Points in (a) are medians of the posterior estimates; error bars indicate the 95% credible intervals. Blue points are for estimates with complete broods; purple points are for the most recent years with incomplete broods. Gray lines show the median relationship for each of the 41 years in the time series based on annual model estimates of productivity. Note that for plotting purposes only in (b) and (c), the density in the largest bin for each parameter contains counts for all values greater than or equal to it. Vertical arrows under the x-axes in (b) and (c) indicate the 2.5$^\\text{th}$, 50$^\\text{th}$, and 97.5$^\\text{th}$ percentiles.", display = "full")`
 
-Here are summaries of the posterior distributions for $\alpha$ and $K$.
-
-```{r SR_posterior_summaries}
-## intrinsic productivity
-round(alphaCI, 2)
-
-## carrying capacity
-round(R_b_CI, 2)
-```
-
-## Covariate effects
+## Fig 4 - Covariate effects
 
 Here are time series plots of the covariates (a-c) and histograms of their effects on productivity (d-f).
 
@@ -427,7 +398,7 @@ c_est <- mod_res[,grep("gamma", colnames(mod_res))]
 ylN <- floor(min(c_est)*10)/10
 ylM <- ceiling(max(c_est)*10)/10
 brks <- seq(ylN,ylM,length.out=diff(c(ylN,ylM))*40+1)
-t_idx <- seq(yr_frst,length.out=n_yrs-age_min+n_fore)
+t_idx <- seq(yr_frst,length.out=n_yrs-age_min)
 dat_cvrs <- as.matrix(dat_cvrs[seq(length(t_idx)),])
 
 for(i in 1:n_cov) {
@@ -470,30 +441,23 @@ cnt <- cnt + 1
 
 `r fig_cap(cnt, caption = "Time series of the environmental covariates used in the model (a-d), and their estimated effects on population productivity (e-g). Small arrows under histograms denote 2.5$^\\text{th}$, 50$^\\text{th}$, and 97.5$^\\text{th}$ percentiles of the posterior distribution.", display = "full")`
 
-Here is a summary of the covariate effect sizes
 
-```{r summarize_gamma}
-gamma_CI <- apply(c_est, 2, quantile, c(2.5, 5, 50, 95, 97.5)/100)
-t(round(gamma_CI, 2))
-```
-
-
-## Process errors
+## Fig 5 - Process errors
 
 Here is the time series of the residuals from the process model. They represent the population's productivity after accounting for the effects of density dependence and environmental covariates.
 
 ```{r fig_5_proc_err, fig.width = 6, fig.height = 4, fig.pos = "placeHere", fig.align="center"}
 ## time sequence
-t_idx_a <- seq(yr_frst, length.out = n_yrs-age_min+n_fore)
+t_idx_a <- seq(yr_frst, length.out = n_yrs-age_min)
 ## plot data
 p_dat <- mod_res[, grep("res_ln_Rec", colnames(mod_res))]
 p_dat <- apply(p_dat, 2, quantile, CI_vec)
 yp_min <- min(p_dat)
 yp_max <- max(p_dat)
 ## plot
-par(mai = c(0.8,0.8,0.1,0.1), omi = c(0,0.2,0.1,0.2))
+par(mai = c(0.8,0.8,0.1,0.1)) #, omi = c(0,0.2,0.1,0.2))
 plot(t_idx_a, p_dat[3,],
-     type = "n",  bty = "L",
+     type = "n",  bty = "L", xaxt = "n", 
      ylim = c(yp_min,yp_max),
      xlab = "Brood year", ylab = "Process error", main = "",
      cex.lab = 1.2)
@@ -501,6 +465,7 @@ abline(h = 0, lty = "dashed")
 polygon(c(t_idx_a, rev(t_idx_a)), c(p_dat[3,], rev(p_dat[1,])),
         col = clr, border = NA)
 lines(t_idx_a, p_dat[2,], col = "blue3", lwd = 2)
+axis(1, at = seq(1980, 2015, 5))
 ```
 
 ```{r, echo=FALSE}
@@ -509,7 +474,7 @@ cnt <- cnt + 1
 
 `r fig_cap(cnt, caption = "Time series of the estimated process errors, which represent the population's productivity after accounting for the effects of density dependence and environmental covariates. The solid line is the median estimate and the shaded region indicates the 95% credible interval.", display = "full")`
 
-## Management reference points
+## Fig 6 - Management reference points
 
 Here are a number of management reference points.
 
@@ -572,21 +537,19 @@ layout(matrix(c(2, 1, 4, 3), 2, 2), heights = c(1, 5))
 yoffSet <- 0.10
 yoffSet <- 0.05
 
-## (a) Optimal yield profile
+clr_f6 <- c("slateblue","blue","darkblue")
+
 par(mai=c(0.9, 0.9, 0, 0), omi=c(0, 0, 0.1, 0.1))
-x_lp <- yld_prop
-for(i in 1:length(x_lp)) {
-	x_lp[i] <- SS[max(which(OYP[,i] == max(OYP[,i])
-	                        | abs(OYP[,i] - (yld_prop[i]-0.3)) <= 0.05))]
-}
+
+## (a) Optimal yield profile
 matplot(SS, OYP, type="l", lty="solid",  ylim=c(0,1),
-        col=c("slateblue","blue","darkblue"), lwd=2,
+        col=clr_f6, lwd=2,
         xlab = "Spawners", ylab = "Probability of X% of MSY", main = "",
         las=1, cex.lab=1.2)
-points(x = x_lp, y = yld_prop-0.3,
+points(x = c(5500, 4300, 2500), y = c(0.4, 0.5, 0.55),
        pch = 21, cex = 3.5,
        col = "white", bg = "white")
-text(x = x_lp, y = yld_prop-0.3, paste0(yld_prop*100, "%"),
+text(x = c(5500, 4300, 2500), y = c(0.4, 0.5, 0.55), paste0(yld_prop*100, "%"),
      col=c("slateblue","blue","darkblue"), cex=0.7)
 text(x = par()$usr[1] + xoffSet * diff(par()$usr[1:2]),
      y = par()$usr[4] - yoffSet * diff(par()$usr[3:4]),
@@ -601,7 +564,7 @@ hist(Sp_ts[Sp_ts<1e4], breaks = 40,
 ## (b) Probability of overfishing
 par(mai=c(0.9, 0.9, 0, 0))
 matplot(Pr_over, type = "l", lwd = 2, lty = "solid",
-        col = c("slateblue","blue","darkblue"), 
+        col = clr_f6, 
         ylab="Probability of overfishing", 
         xlab="Harvest rate", xaxt="n",
         las = 1, cex.lab = 1.2)
@@ -630,4 +593,25 @@ cnt <- cnt + 1
 ```
 
 `r fig_cap(cnt, caption = "Plots of (a) the probability that a given number of spawners produces average yields achieving 95%, 85%, or 75% of the estimated maximum sustainable yield (MSY); and (b) the cumulative probability of overfishing the population, based on harvest rates equal to those at 75% of MSY, at MSY, and at the maximum per recruit. The histograms above (a) and (b) are distributions of the posterior estimates for the number of spawners and harvest rates, respectively; the histogram in (a) has been truncated at $10^4$.", display = "full")`
+
+\newpage
+
+# Miscellaneous results
+
+Here are summaries of the posterior distributions for $\alpha$ and $K$.
+
+```{r SR_posterior_summaries}
+## intrinsic productivity
+round(alphaCI, 2)
+
+## carrying capacity
+round(R_b_CI, 2)
+```
+
+Here is a summary of the covariate effect sizes.
+
+```{r summarize_gamma}
+gamma_CI <- apply(c_est, 2, quantile, c(2.5, 5, 50, 95, 97.5)/100)
+t(round(gamma_CI, 2))
+```
 

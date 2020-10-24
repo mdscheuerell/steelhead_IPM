@@ -1,11 +1,10 @@
 ---
 title: "Appendix S2. Model definitions, model fitting, and model evaluation."
-subtitle: Supporting information for Scheuerell et al.
 output:
   pdf_document:
     highlight: haddock
     toc: yes
-    number_sections: true
+    number_sections: false
     toc_depth: '3'
 fontsize: 11pt
 geometry: margin=1in
@@ -30,31 +29,18 @@ This is version `r paste0('0.',format(Sys.time(), '%y.%m.%d'))`.
 
 This appendix describes how we fit the models and evaluated their relative performances. It demonstrates how to load the fish data and environmenal covariates, specify the different models in the __JAGS__ software, and fit each one. 
 
-All analyses require the [R software](https://cran.r-project.org/) (v3.4.3 or later) for data retrieval, data processing, and summarizing model results, and the [JAGS software](http://mcmc-jags.sourceforge.net/) (v4.2.0) for Markov chain Monte Carlo (MCMC) simulation. Please note that some of the __R__ code below may not work with older versions of __JAGS__ due to some changes in the ways that arrays are handled.
+All analyses require the [R software](https://cran.r-project.org/) (v3.6 or later) for data retrieval, data processing, and summarizing model results, and the [JAGS software](http://mcmc-jags.sourceforge.net/) (v4.2.0) for Markov chain Monte Carlo (MCMC) simulation. Please note that some of the __R__ code below may not work with older versions of __JAGS__ due to some changes in the ways that arrays are handled.
 
 We also need a few packages that are not included with the base installation of __R__, so we begin by installing them (if necessary) and then loading them.
 
 ```{r load_pkgs, message = FALSE, warning = FALSE}
-if(!require("here")) {
-  install.packages("here")
-  library("here")
-}
-if(!require("readr")) {
-  install.packages("readr")
-  library("readr")
-}
-if(!require("rjags")) {
-  install.packages("rjags")
-  library("rjags")
-}
-if(!require("loo")) {
-  install.packages("loo")
-  library("loo")
-}
-if(!require("ggplot2")) {
-  install.packages("ggplot2")
-  library("ggplot2")
-}
+## load libraries
+library("here")
+library("readr")
+library("rjags")
+library("loo")
+library("ggplot2")
+
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -62,18 +48,9 @@ analdir <- here("analysis")
 savedir <- here("analysis/cache")
 ```
 
-We also need a couple of helper functions.
+We also need a this helper function for fitting the models with **JAGS**.
 
 ```{r define_funcs}
-## better round
-Re2prec <- function(x, fun = "round", prec = 1) {
-  ## 'fun' can be "round", "floor", or "ceiling"
-  ## 'prec' is nearest value
-  ## (eg, 0.1 is to nearest tenth; 1 is to nearest integer)
-  if(prec<=0) { stop("\"prec\" cannot be less than or equal to 0") }
-  do.call(map,list(x/prec))*prec
-}
-
 ## wrapper function to fit JAGS models & rearrange output
 fit_jags <- function(model, data, params, inits, ctrl, dir = jagsdir) {
   jm <- jags.model(file.path(jagsdir, model),
