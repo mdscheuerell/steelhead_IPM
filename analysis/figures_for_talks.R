@@ -485,10 +485,10 @@ for(i in 1:n_cov) {
     mtext(side = 1, "Brood year", line = 3)
   }
   ## plot covar effect
-  hist(c_est[,i+3],
+  hist(c_est[,i+2],
        freq = FALSE, breaks = brks, col = clr, border =" blue3",
        xlab = "", yaxt = "n", main = "", ylab = "", cex.axis = 1.2)
-  c_CI <- quantile(c_est[,i],CI_vec)
+  c_CI <- quantile(c_est[,i+2],CI_vec)
   aHt <- (par()$usr[4]-par()$usr[3])/20
   arrows(c_CI, par()$usr[3]-0.005, c_CI, par()$usr[3] - aHt,
          code = 1,length = 0.05, xpd = NA, col = "blue3", lwd = 1.5)
