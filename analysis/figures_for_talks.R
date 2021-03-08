@@ -73,8 +73,8 @@ n_fore <- 0
 CI_vec <- c(0.025,0.5,0.975)
 
 ## covariate names & units for plotting
-cov_names <- c(expression(paste("Max flow (",m^3," ",s^{-1},")")),
-               expression(paste("Min flow (",m^3," ",s^{-1},")")),
+cov_names <- c(expression(paste("Flow (",m^3," ",s^{-1},")")),
+               expression(paste("Flow (",m^3," ",s^{-1},")")),
                "NPGO",
                expression(paste("H releases (",10^3,")")))
 
@@ -129,6 +129,8 @@ buy <- 1 - sqrt(1/ba)
 ## S-R curves
 ## spawners
 ss <- seq(0,1.2e4,10)
+## D-I
+ri <- 1.4 * ss
 ## recuits (Ricker)
 rr <- ra*ss/exp(rb*ss)
 ## recruits (B-H)
@@ -137,27 +139,60 @@ br <- ba*ss/(1 + bb*ss)
 
 ## ----fig_1_model_forms, fig.height=6.5, fig.width=3.25, fig.pos="placeHere", fig.align="center"--------------------------------------------
 
-pdf(file.path(figdir, "Figure_1.pdf"), width = 8/2.54, height = 15.8/2.54)
+pdf(file.path(figdir, "Figure_1_all_3.pdf"), width = 26/2.54, height = 8/2.54)
 
-layout(matrix(c(1,0,2),3,1),
-       heights=lcm(c(7.5, 0.8, 7.5)),
-       widths=lcm(8 - 0.25*2.54))
+# layout(matrix(c(1,0,2),3,1),
+#        heights=lcm(c(7.5, 0.8, 7.5)),
+#        widths=lcm(8 - 0.25*2.54))
+layout(matrix(c(1, 0, 2, 0, 3), 1, 5),
+       widths = lcm(c(7.5, 0.8, 7.5, 0.8, 7.5)),
+       heights = lcm(8 - 0.25*2.54))
 # layout.show(2)
 
-par(mai=c(0.4,0.4,0.2,0.2), omi=c(0,0,0,0.25))
+par(mai=c(0.4,0.4,0.2,0.2), omi=c(0,0,0,0.3))
+
+## D-I
+plot(ss, ri, type="n", xlim=range(ss), ylim=range(ss), xaxs="i", yaxs="i",
+     xlab="", ylab="", xaxt="n", yaxt="n", bty="L")
+mtext(expression(italic(S[t])), 1, line=1, cex=1.1, at=max(ss))
+mtext(expression(italic(R[t])), 2, line=0.5, cex=1.1, at=max(ss), las=1)
+ittl <- "Density independent"
+# text(400, max(ss), ittl, cex=1.1, adj=c(0,1), xpd=NA)
+mtext(ittl, line = 1)
+## 1:1
+abline(a=0, b=1, col="gray")
+#text(1.2e4, 1.2e4, "1:1", adj=c(1,0))
+## R-S
+lines(ss, ri, lwd=2, col = "blue")
+rmod <- expression(italic(alpha * S[t]))
+text(12300 / 1.4, 11900, rmod, adj=c(0,0.5), xpd=NA)
+## alpha
+# segments(0, 0, 1900, ra*1900, lty="dashed")
+# text(2000, ra*2000, expression(alpha), adj=c(0.5,0.5))
+## MSY
+# segments(rsy,0,rsy,ra*rsy/exp(rb*rsy), lty="dashed")
+# text(rsy, 0, expression(frac(1-italic(W)~bgroup("(",frac(italic(e),alpha),")"),beta)), adj=c(0.5,1.1), xpd=NA)
+# segments(par()$usr[1],ra*rsy/exp(rb*rsy),rsy,ra*rsy/exp(rb*rsy), lty="dashed")
+# text(0, ra*rsy/exp(rb*rsy), expression(italic(R)[MSY]), pos=2, xpd=NA)
+## K
+# segments(0, log(ra)/rb, log(ra)/rb, log(ra)/rb, lty="dashed")
+# segments(log(ra)/rb, 0, log(ra)/rb, log(ra)/rb, lty="dashed")
+# text(log(ra)/rb, 0, expression(frac(log(alpha),beta)), adj=c(0.5,1.2), xpd=NA)
+# text(0, log(ra)/rb, expression(italic(K)), pos=2, xpd=NA)
 
 ## Ricker
 plot(ss, rr, type="n", xlim=range(ss), ylim=range(ss), xaxs="i", yaxs="i",
      xlab="", ylab="", xaxt="n", yaxt="n", bty="L")
 mtext(expression(italic(S[t])), 1, line=1, cex=1.1, at=max(ss))
 mtext(expression(italic(R[t])), 2, line=0.5, cex=1.1, at=max(ss), las=1)
-rttl <- "(a) Ricker"
-text(400, max(ss), rttl, cex=1.1, adj=c(0,1), xpd=NA)
+rttl <- "Ricker"
+# text(400, max(ss), rttl, cex=1.1, adj=c(0,1), xpd=NA)
+mtext(rttl, line = 1)
 ## 1:1
 abline(a=0, b=1, col="gray")
 #text(1.2e4, 1.2e4, "1:1", adj=c(1,0))
 ## R-S
-lines(ss, rr, lwd=2)
+lines(ss, rr, lwd=2, col = "blue")
 rmod <- expression(frac(italic(alpha * S[t]),italic(e^{beta * S[t]})))
 text(12300, ra*max(ss)/exp(rb*max(ss)), rmod, adj=c(0,0.5), xpd=NA)
 ## alpha
@@ -179,12 +214,13 @@ plot(ss, br, type="n", xlim=range(ss), ylim=range(ss), xaxs="i", yaxs="i",
      xlab="", ylab="", xaxt="n", yaxt="n", bty="L")
 mtext(expression(italic(S[t])), 1, line=1, cex=1.1, at=max(ss))
 mtext(expression(italic(R[t])), 2, line=0.5, cex=1.1, at=max(ss), las=1)
-bttl <- "(b) Beverton-Holt"
-text(400, max(ss), bttl, cex=1.1, adj=c(0,1), xpd=NA)
+bttl <- "Beverton-Holt"
+# text(400, max(ss), bttl, cex=1.1, adj=c(0,1), xpd=NA)
+mtext(bttl, line = 1)
 ## 1:1
 abline(a=0, b=1, col="gray")
 ## R-S
-lines(ss, br, lwd=2)
+lines(ss, br, lwd=2, col = "blue")
 bmod <- expression(frac(italic(alpha * S[t]),1+italic(beta * S[t])))
 text(max(ss)+300, ba*max(ss)/(1 + bb*max(ss)), bmod, adj=c(0,0.5), xpd=NA)
 ## alpha
@@ -357,7 +393,7 @@ dev.off()
 
 
 
-## FLOW EFFECTS
+## ----FLOW EFFECTS----
 
 pdf(file.path(figdir, "flow_effects.pdf"), width = 18/2.54, height = 12/2.54)
 
@@ -367,7 +403,7 @@ yoffSet <- 0.03
 
 n_cov <- 2
 
-cov_titles <- c("Winter", "Summer")
+cov_titles <- c("Winter max", "Summer min")
 
 par(mfrow=c(n_cov,2), mai=c(0.5,0.3,0.4,0.1), omi=c(0.2,0.5,0,0))
 
@@ -395,6 +431,61 @@ for(i in 1:n_cov) {
   }
   ## plot covar effect
   hist(c_est[,i],
+       freq = FALSE, breaks = brks, col = clr, border =" blue3",
+       xlab = "", yaxt = "n", main = "", ylab = "", cex.axis = 1.2)
+  c_CI <- quantile(c_est[,i],CI_vec)
+  aHt <- (par()$usr[4]-par()$usr[3])/20
+  arrows(c_CI, par()$usr[3]-0.005, c_CI, par()$usr[3] - aHt,
+         code = 1,length = 0.05, xpd = NA, col = "blue3", lwd = 1.5)
+  abline(v = 0, lty = "dashed")
+  # text(x = par()$usr[1] + diff(par()$usr[1:2]) * xoffSet,
+  #      y = par()$usr[4] - diff(par()$usr[3:4]) * yoffSet,
+  #      paste0("(",letters[i+n_cov],")"),
+  #      cex = 1.2, xpd = NA)
+  if(i == n_cov) { mtext(side = 1,"Effect size", line = 3) }
+}
+
+dev.off()
+
+
+## ----NPGO EFFECTS----
+
+pdf(file.path(figdir, "npgo_effects.pdf"), width = 18/2.54, height = 8/2.54)
+
+clr <- rgb(0, 0, 255, alpha = 50, maxColorValue = 255)
+xoffSet <- 0.04
+yoffSet <- 0.03
+
+n_cov <- 1
+
+cov_titles <- c("NPGO")
+
+par(mfrow=c(n_cov,2), mai=c(0.5,0.3,0.4,0.1), omi=c(0.3,0.55,0,0))
+
+c_est <- mod_res[,grep("gamma", colnames(mod_res))]
+ylN <- floor(min(c_est)*10)/10
+ylM <- ceiling(max(c_est)*10)/10
+brks <- seq(ylN,ylM,length.out=diff(c(ylN,ylM))*40+1)
+t_idx <- seq(yr_frst,length.out=n_yrs-age_min+n_fore)
+dat_cvrs <- as.matrix(dat_cvrs[seq(length(t_idx)),])
+
+for(i in 1:n_cov) {
+  ## plot covar ts
+  plot(dat_cvrs[, "year"], dat_cvrs[, i+3],
+       pch = 16, col = "blue3", type = "o",
+       xlab = "", ylab = "", main = "", bty = "L",
+       cex.axis = 1.2)
+  # text(x = par()$usr[1] + diff(par()$usr[1:2]) * xoffSet,
+  #      y = par()$usr[4] - diff(par()$usr[3:4]) * yoffSet,
+  #      paste0("(",letters[i],")"),
+  #      cex = 1.2, xpd = NA)
+  mtext(side = 2, cov_names[i+2], line = 3, cex = 1.2)
+  # mtext(side = 3, cov_titles[i], line = 0.5, adj = 0, cex = 1.2)
+  if(i == n_cov) {
+    mtext(side = 1, "Brood year", line = 3)
+  }
+  ## plot covar effect
+  hist(c_est[,i+3],
        freq = FALSE, breaks = brks, col = clr, border =" blue3",
        xlab = "", yaxt = "n", main = "", ylab = "", cex.axis = 1.2)
   c_CI <- quantile(c_est[,i],CI_vec)
